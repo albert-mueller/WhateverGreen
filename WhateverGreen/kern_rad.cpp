@@ -174,7 +174,12 @@ void RAD::processKernel(KernelPatcher &patcher, DeviceInfo *info) {
 			KernelPatcher::RouteRequest("__ZN15IORegistryEntry11setPropertyEPKcPvj", wrapSetProperty, orgSetProperty),
 			KernelPatcher::RouteRequest("__ZNK15IORegistryEntry11getPropertyEPKc", wrapGetProperty, orgGetProperty),
 		};
-		patcher.routeMultiple(KernelPatcher::KernelID, requests);
+		
+		if (getKernelVersion() >= KernelVersion::Catalina) {
+			patcher.routeMultipleLong(KernelPatcher::KernelID, requests, arrsize(requests));
+		} else {
+			patcher.routeMultiple(KernelPatcher::KernelID, requests);
+		}
 
 		if (useCustomAgdpDecision && info->firmwareVendor == DeviceInfo::FirmwareVendor::Apple)
 			useCustomAgdpDecision = false;
