@@ -1,5 +1,8 @@
  WhateverGreen Changelog
 =======================
+#### v1.7.1
+- Added support for routing IOReg getProperty in other kexts
+
 #### v1.7.0
 - Added constants for macOS 26 support
 
