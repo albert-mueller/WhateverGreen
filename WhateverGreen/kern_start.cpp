@@ -24,6 +24,10 @@ static const char *bootargBeta[] {
 	"-wegbeta"
 };
 
+/**
+ * Plugin configuration for Lilu
+ * Fixed to include support for KernelVersion::Tahoe (macOS 26)
+ */
 PluginConfiguration ADDPR(config) {
 	xStringify(PRODUCT_NAME),
 	parseModuleVersion(xStringify(MODULE_VERSION)),
@@ -34,8 +38,8 @@ PluginConfiguration ADDPR(config) {
 	arrsize(bootargDebug),
 	bootargBeta,
 	arrsize(bootargBeta),
-	KernelVersion::SnowLeopard,
-	KernelVersion::Tahoe,
+	KernelVersion::SnowLeopard, // Minimum kernel version (10.6)
+	KernelVersion::Tahoe,       // Maximum kernel version (macOS 26 Tahoe)
 	[]() {
 		weg.init();
 	}
