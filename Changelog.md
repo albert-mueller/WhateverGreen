@@ -1,6 +1,6 @@
  WhateverGreen Changelog
 =======================
-#### v1.7.1s
+#### v1.7.1
 - Added support for routing IOReg getProperty in other kexts
 
 #### v1.7.0
