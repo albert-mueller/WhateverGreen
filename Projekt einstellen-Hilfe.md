@@ -35,3 +35,4 @@ Dannach um zum Programmieren dieser Kext vorzubereiten, Sie müssen das Projekt 
 <img width="1600" height="900" alt="image" src="https://github.com/user-attachments/assets/0f000681-d024-4055-a730-07fcc6e4374f" />
 15. Dann drücken Sie die Eingabetaste
 <img width="697" height="483" alt="image" src="https://github.com/user-attachments/assets/b7087179-b25d-4538-b60d-c284a6f1b284" />
+Dann Ihr seid bereit, das Projekt zu programmieren und kompilieren.
