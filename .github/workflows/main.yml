@@ -10,15 +10,10 @@ on:
 env:
   PROJECT_TYPE: KEXT
 
-permissions:
-  contents: read
-
 jobs:
   build:
     name: Build
     runs-on: macos-latest
-    permissions:
-      contents: write
     env:
       JOB_TYPE: BUILD
     steps:
@@ -27,7 +22,6 @@ jobs:
         with:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
-
       - name: CI Bootstrap
         run: |
           src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh) && eval "$src" || exit 1
@@ -35,16 +29,14 @@ jobs:
         run: |
           src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh) && eval "$src" || exit 1
 
-      # Erhöhte Performance durch Entfernen von -jobs 1
-      - run: xcodebuild -configuration Debug
-      - run: xcodebuild -configuration Release
+      - run: xcodebuild -jobs 1 -configuration Debug
+      - run: xcodebuild -jobs 1 -configuration Release
 
       - name: Upload to Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
           path: build/*/*.zip
-          
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: svenstaro/upload-release-action@v2
@@ -72,13 +64,8 @@ jobs:
         run: |
           src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh) && eval "$src" || exit 1
 
-      # Bessere Pfad-Handhabung durch absolute Pfade
-      - run: |
-          xcodebuild analyze -quiet -scheme WhateverGreen -configuration Debug CLANG_ANALYZER_OUTPUT=plist-html CLANG_ANALYZER_OUTPUT_DIR="${{ github.workspace }}/clang-analyze"
-          [ ! -d "${{ github.workspace }}/clang-analyze" ] || [ "$(ls -A ${{ github.workspace }}/clang-analyze)" = "" ]
-      - run: |
-          xcodebuild analyze -quiet -scheme WhateverGreen -configuration Release CLANG_ANALYZER_OUTPUT=plist-html CLANG_ANALYZER_OUTPUT_DIR="${{ github.workspace }}/clang-analyze"
-          [ ! -d "${{ github.workspace }}/clang-analyze" ] || [ "$(ls -A ${{ github.workspace }}/clang-analyze)" = "" ]
+      - run: xcodebuild analyze -quiet -scheme WhateverGreen -configuration Debug CLANG_ANALYZER_OUTPUT=plist-html CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" && [ "$(find clang-analyze -name "*.html")" = "" ]
+      - run: xcodebuild analyze -quiet -scheme WhateverGreen -configuration Release CLANG_ANALYZER_OUTPUT=plist-html CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" && [ "$(find clang-analyze -name "*.html")" = "" ]
 
   analyze-coverity:
     name: Analyze Coverity
