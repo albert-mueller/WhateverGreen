@@ -24,7 +24,7 @@ ln -s ../MacKernelSDK MacKernelSDK
 # Lilu als Symlink für WhateverGreen verknüpfen
 ln -s ../Lilu/build/Debug/Lilu.kext Lilu.kext
 # Bauen
-xcodebuild -project WhateverGreen.xcodeproj -configuration Debug
+xcodebuild -project WhateverGreen.xcodeproj -configuration Debug build
 cd ..
 
 echo "Build erfolgreich abgeschlossen!"
