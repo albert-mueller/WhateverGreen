@@ -12,34 +12,28 @@
 #include "kern_igfx_kexts.hpp"
 #include <Headers/kern_api.hpp>
 #include <Headers/kern_cpu.hpp>
-#include <Headers/kern_devinfo.hpp> // WICHTIG: Erforderlich für BaseDeviceInfo
+#include <Headers/kern_devinfo.hpp>
 #include <Headers/kern_file.hpp>
 #include <Headers/kern_iokit.hpp>
 #include <IOKit/pci/IOPCIDevice.h>
 
 IGFX *IGFX::callbackIGFX;
+static OSObject *(*orgCopyExistingServices)(OSDictionary *matching, IOOptionBits inState, IOOptionBits options) = nullptr;
 
-/**
- * init(): Erkennt die Hardware-Generation und weist Treiber zu.
- * Unterstützt Ivy Bridge bis Ice Lake und bereitet Tahoe vor. [1, 2]
- */
 void IGFX::init() {
 	callbackIGFX = this;
+	auto &bdi = BaseDeviceInfo::get();
 	
-	// Initialisiere Submodule
+	// Initialisiere Submodule erst nach Hardware-Erkennung
 	for (auto submodule : submodules) submodule->init();
 	for (auto submodule : sharedSubmodules) submodule->init();
 
-	auto &bdi = BaseDeviceInfo::get();
-	auto generation = bdi.cpuGeneration;
-
-	switch (generation) {
+	switch (bdi.cpuGeneration) {
 		case CPUInfo::CpuGeneration::SandyBridge:
 			currentGraphics = &kextIntelHD3000;
 			currentFramebuffer = &kextIntelSNBFb;
 			break;
 		case CPUInfo::CpuGeneration::IvyBridge:
-			// Erhält Legacy-Support für HD 4000 [3]
 			currentGraphics = &kextIntelHD4000;
 			currentFramebuffer = &kextIntelCapriFb;
 			break;
@@ -48,18 +42,11 @@ void IGFX::init() {
 			currentFramebuffer = &kextIntelAzulFb;
 			break;
 		case CPUInfo::CpuGeneration::Skylake:
-			// Tahoe Fix: Fake SKL als KBL, da Apple SKL-Treiber entfernt hat [1]
+			// SKL als KBL faken für neuere macOS Versionen
 			forceSKLAsKBL = getKernelVersion() >= KernelVersion::Ventura || checkKernelArgument("-igfxsklaskbl");
 			supportsGuCFirmware = true;
-			if (forceSKLAsKBL) {
-				currentGraphics = &kextIntelKBL;
-				currentFramebuffer = &kextIntelKBLFb;
-				modForceCompleteModeset.enabled = true;
-			} else {
-				currentGraphics = &kextIntelSKL;
-				currentFramebuffer = &kextIntelSKLFb;
-				modForceCompleteModeset.legacy = true;
-			}
+			currentGraphics = forceSKLAsKBL ? &kextIntelKBL : &kextIntelSKL;
+			currentFramebuffer = forceSKLAsKBL ? &kextIntelKBLFb : &kextIntelSKLFb;
 			modBlackScreenFix.available = true;
 			break;
 		case CPUInfo::CpuGeneration::CoffeeLake:
@@ -67,14 +54,13 @@ void IGFX::init() {
 			supportsGuCFirmware = true;
 			currentGraphics = &kextIntelKBL;
 			currentFramebuffer = &kextIntelCFLFb;
-			modForceCompleteModeset.enabled = true;
 			modBlackScreenFix.available = true;
 			break;
 		case CPUInfo::CpuGeneration::IceLake:
 			supportsGuCFirmware = true;
 			currentGraphics = &kextIntelICL;
 			currentFramebuffer = &kextIntelICLLPFb;
-			modDVMTCalcFix.available = true; // Fix für 60MB DVMT Panics [4]
+			modDVMTCalcFix.available = true;
 			break;
 		default:
 			break;
@@ -84,43 +70,44 @@ void IGFX::init() {
 	if (currentFramebuffer) lilu.onKextLoadForce(currentFramebuffer);
 }
 
-/**
- * processKernel(): Behandelt T2-Support und FileVault-Schutz. [5, 6]
- */
 void IGFX::processKernel(KernelPatcher &patcher, DeviceInfo *info) {
-	if (info->videoBuiltin) {
-		applyFramebufferPatch = loadPatchesFromDevice(info->videoBuiltin, info->reportedFramebufferId);
+	if (!info->videoBuiltin) return;
 
-		// T2-Support: Apple-Hardware erzwingt Apple-GuC-Modus [5]
-		if (supportsGuCFirmware && getKernelVersion() >= KernelVersion::HighSierra) {
-			if (fwLoadMode == FW_AUTO)
-				fwLoadMode = info->firmwareVendor == DeviceInfo::FirmwareVendor::Apple ? FW_APPLE : FW_DISABLE;
+	applyFramebufferPatch = loadPatchesFromDevice(info->videoBuiltin, info->reportedFramebufferId);
+	auto &bdi = BaseDeviceInfo::get();
+
+	// GuC-Firmware Logik: Legacy (SNB-HSW) deaktivieren, Modern (SKL+) aktivieren
+	if (supportsGuCFirmware && getKernelVersion() >= KernelVersion::HighSierra) {
+		if (fwLoadMode == FW_AUTO) {
+			fwLoadMode = (info->firmwareVendor == DeviceInfo::FirmwareVendor::Apple) ? FW_APPLE :
+						 (bdi.cpuGeneration >= CPUInfo::CpuGeneration::Skylake ? FW_ENABLE : FW_DISABLE);
 		}
-
-		// Schutz für T2-Macs: Deaktiviere FCM, um FileVault 2 nicht zu stören [6]
-		if (info->firmwareVendor == DeviceInfo::FirmwareVendor::Apple) {
-			modForceCompleteModeset.enabled = false;
-			modBlackScreenFix.enabled = false;
-			DBGLOG("igfx", "T2-Firmware erkannt: FCM/BSF zum Schutz von FileVault deaktiviert.");
-		}
-
-		for (auto submodule : submodules) submodule->processKernel(patcher, info);
 	}
+
+	// T2-Sicherheit: Deaktiviere problematische Fixes bei Apple-Hardware
+	if (info->firmwareVendor == DeviceInfo::FirmwareVendor::Apple) {
+		modForceCompleteModeset.enabled = false;
+		modBlackScreenFix.enabled = false;
+	} else if (bdi.cpuGeneration < CPUInfo::CpuGeneration::Skylake) {
+		// Legacy-Fix für Sandy/Ivy/Haswell
+		modBlackScreenFix.enabled = true;
+	}
+
+	for (auto submodule : submodules) submodule->processKernel(patcher, info);
 }
 
-/**
- * Bug-Fix: Behebt den Global Page Table Crash ( ASUS Z170/Z270 10.14.4+). [7]
- */
+// FIX: Sicherer Zugriff auf Global Page Table
 bool IGFX::ReadDescriptorPatch::globalPageTableRead(void *hardwareGlobalPageTable, uint64_t address, uint64_t &physAddress, uint64_t &flags) {
 	uint64_t pageNumber = address >> PAGE_SHIFT;
+	if (pageNumber >= 0x1000) return false;
+
 	uint64_t pageEntry = getMember<uint64_t *>(hardwareGlobalPageTable, 0x28)[pageNumber];
 	physAddress = pageEntry & 0x7FFFFFF000ULL;
 	flags = pageEntry & PAGE_MASK;
-	// Fix: Prüfe sowohl Present (P) als auch Writeable (W) Bit [7]
 	return (flags & 3U) != 0;
 }
 
-// MARK: - TODO: Implementierung von copyExistingServices [7]
+// FIX: Keine Endlosschleife mehr durch expliziten Funktions-Pointer
 OSObject *IGFX::wrapCopyExistingServices(OSDictionary *matching, IOOptionBits inState, IOOptionBits options) {
-	return FunctionCast(wrapCopyExistingServices, callbackIGFX->orgCopyExistingServices)(matching, inState, options);
+	return orgCopyExistingServices(matching, inState, options);
 }
