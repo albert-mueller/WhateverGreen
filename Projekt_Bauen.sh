@@ -5,7 +5,7 @@ cd /Users/boyan1/Downloads
 rm -rf Lilu MacKernelSDK WhateverGreen
 
 # Frisch klonen (Nur von offiziellen Quellen)
-git clone https://github.com/albert-mueller/Lilu/tree/master
+git clone https://github.com/albert-mueller/Lilu
 git clone https://github.com/acidanthera/MacKernelSDK
 git clone https://github.com/albert-mueller/WhateverGreen
 
