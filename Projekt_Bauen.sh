@@ -7,9 +7,9 @@ cd /Users/boyan1/Downloads
 rm -rf Lilu MacKernelSDK WhateverGreen
 
 # 2. OFFIZIELLE Quellen klonen (Hier liegt die Lösung für deinen Build-Fehler)
-git clone https://github.com/acidanthera/Lilu
+git clone https://github.com/albert-mueller/Lilu/
 git clone https://github.com/acidanthera/MacKernelSDK
-git clone https://github.com/acidanthera/WhateverGreen
+git clone https://github.com/albert-mueller/WhateverGreen/
 
 # 3. Lilu bauen
 cd Lilu
