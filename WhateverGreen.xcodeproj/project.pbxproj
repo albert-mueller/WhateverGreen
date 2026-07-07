@@ -659,7 +659,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MODULE_NAME = as.vit9696.WhateverGreen;
 				MODULE_START = "$(PRODUCT_NAME)_kern_start";
 				MODULE_STOP = "$(PRODUCT_NAME)_kern_stop";
@@ -711,7 +711,7 @@
 					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				LLVM_LTO = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MODULE_NAME = as.vit9696.WhateverGreen;
 				MODULE_START = "$(PRODUCT_NAME)_kern_start";
 				MODULE_STOP = "$(PRODUCT_NAME)_kern_stop";
@@ -858,7 +858,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MODULE_NAME = as.vit9696.WhateverGreen;
 				MODULE_START = "$(PRODUCT_NAME)_kern_start";
 				MODULE_STOP = "$(PRODUCT_NAME)_kern_stop";
