@@ -16,9 +16,9 @@ clone_or_update() {
 }
 
 # 1. Repositories klonen oder aktualisieren
-clone_or_update "Lilu" "https://github.com/acidanthera/Lilu"
+clone_or_update "Lilu" "https://github.com/albert-mueller/Lilu/"
 clone_or_update "MacKernelSDK" "https://github.com/acidanthera/MacKernelSDK"
-clone_or_update "WhateverGreen" "https://github.com/acidanthera/WhateverGreen"
+clone_or_update "WhateverGreen" "https://github.com/albert-mueller/WhateverGreen/"
 
 # HINWEIS: Falls ein Fehler wegen 'xcodebuild' kommt, führe diesen Befehl 
 # EINMALIG manuell im Terminal aus (nur nötig, wenn das System es noch nicht weiß):
