@@ -16,7 +16,7 @@ clone_or_update() {
 }
 
 # 1. Repositories klonen oder aktualisieren
-clone_or_update "Lilu" "https://github.com/albert-mueller/Lilu"
+clone_or_update "Lilu" "https://github.com/acidanthera/Lilu"
 clone_or_update "MacKernelSDK" "https://github.com/acidanthera/MacKernelSDK"
 clone_or_update "WhateverGreen" "https://github.com/albert-mueller/WhateverGreen"
 
