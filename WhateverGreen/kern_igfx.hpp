@@ -2,18 +2,9 @@
 #define kern_igfx_hpp
 
 #include "kern_fb.hpp"
-#include "kern_igfx_lspcon.hpp"
-#include "kern_igfx_backlight.hpp"
 #include <Headers/kern_patcher.hpp>
 #include <Headers/kern_devinfo.hpp>
-#include <Headers/kern_cpu.hpp>
-#include <Headers/kern_disasm.hpp>
-#include <IOKit/IOService.h>
-#include <IOKit/IOLocks.h>
-
-class AppleIntelFramebufferController;
-class AppleIntelPort;
-
+typedef int (*PmNotifyWrapperFunc)(unsigned int, unsigned int, unsigned long long *, unsigned int *);
 class IGFX {
 public:
 	void init();
@@ -23,23 +14,22 @@ public:
 
 	static IGFX *callbackIGFX;
 
-	// --- Deine neuen Ergänzungen ---
-	struct ReadDescriptorPatch {
-		static bool globalPageTableRead(void *hardwareGlobalPageTable, uint64_t address, uint64_t &physAddress, uint64_t &flags);
-	};
-	static OSObject *wrapCopyExistingServices(OSDictionary *matching, IOOptionBits inState, IOOptionBits options);
-
-	// --- Basis für Module ---
-	class PatchSubmodule {
-	public:
+	// Basis-Klasse für alle Module
+	struct PatchSubmodule {
 		virtual ~PatchSubmodule() = default;
 		bool enabled {false};
+		bool available {false};
+		bool requiresPatchingGraphics {false};
+		bool requiresPatchingFramebuffer {false};
+		bool requiresGlobalFramebufferControllersAccess {false};
+		bool requiresMMIORegistersReadAccess {false};
+		bool requiresMMIORegistersWriteAccess {false};
 		virtual void init() {}
 		virtual void processKernel(KernelPatcher &patcher, DeviceInfo *info) {}
 		virtual void processGraphicsKext(KernelPatcher &patcher, size_t index, mach_vm_address_t address, size_t size) {}
 	};
 
-	// --- Module (erforderlich für kern_igfx_pm.cpp) ---
+	// Modul-Instanzen müssen hier definiert sein
 	struct RPSControlPatch : public PatchSubmodule {
 		void init() override;
 		void processKernel(KernelPatcher &patcher, DeviceInfo *info) override;
@@ -48,7 +38,7 @@ public:
 		static int wrapPmNotifyWrapper(unsigned int a0, unsigned int a1, unsigned long long *a2, unsigned int *freq);
 		bool patchRCSCheck(mach_vm_address_t& start);
 		uint32_t freq_max {0};
-		mach_vm_address_t orgPmNotifyWrapper {};
+		mach_vm_address_t orgPmNotifyWrapper {0};
 	} modRPSControlPatch;
 
 	struct ForceWakeWorkaround : public PatchSubmodule {
@@ -59,36 +49,10 @@ public:
 		bool forceWakeWaitAckFallback(uint32_t d, uint32_t val, uint32_t mask);
 	} modForceWakeWorkaround;
 
-	struct FramebufferControllerAccessSupport : public PatchSubmodule {
-		void init() override;
-		void processKernel(KernelPatcher &patcher, DeviceInfo *info) override;
-	} modFramebufferControllerAccessSupport;
-
-	// --- Konfiguration ---
-	PatchSubmodule *submodules[3] { &modFramebufferControllerAccessSupport, &modRPSControlPatch, &modForceWakeWorkaround };
-
-	// Register-Zugriffsmethoden (erforderlich für die Logik in kern_igfx_pm.cpp)
+	// Hilfsmethoden für den Registerzugriff
 	uint32_t readRegister32(void *controller, uint32_t reg);
 	void writeRegister32(void *controller, uint32_t reg, uint32_t val);
 	void *defaultController();
-
-	enum FirmwareLoad { FW_AUTO = -1, FW_DISABLE = 0, FW_ENABLE = 1, FW_LILU = 2, FW_APPLE = 3 };
-	FirmwareLoad fwLoadMode {FW_AUTO};
-	bool supportsGuCFirmware {false};
-	bool forceSKLAsKBL {false};
-
-	struct ModSettings { bool available {false}; bool enabled {false}; bool legacy {false}; }
-	modForceCompleteModeset {}, modBlackScreenFix {}, modDVMTCalcFix {};
-
-	KernelPatcher::KextInfo *getRealFramebuffer(size_t index) {
-		return (currentFramebuffer && currentFramebuffer->loadIndex == index) ? currentFramebuffer : currentFramebufferOpt;
-	}
-
-private:
-	KernelPatcher::KextInfo *currentGraphics {nullptr};
-	KernelPatcher::KextInfo *currentFramebuffer {nullptr};
-	KernelPatcher::KextInfo *currentFramebufferOpt {nullptr};
-	mach_vm_address_t orgCopyExistingServices {};
 };
 
 #endif
