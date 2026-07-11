@@ -29,6 +29,12 @@ public:
 	bool processKext(KernelPatcher &patcher, size_t index, mach_vm_address_t address, size_t size);
 
 	static IGFX *callbackIGFX;
+	// Füge dies hier innerhalb der Klasse IGFX hinzu:
+		struct ReadDescriptorPatch {
+			static bool globalPageTableRead(void *hardwareGlobalPageTable, uint64_t address, uint64_t &physAddress, uint64_t &flags);
+		};
+
+		static OSObject *wrapCopyExistingServices(OSDictionary *matching, IOOptionBits inState, IOOptionBits options);
 
 	// Fix: Enums vollständig definiert
 	enum FirmwareLoad {
